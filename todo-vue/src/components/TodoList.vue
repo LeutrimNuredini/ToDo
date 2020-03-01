@@ -17,30 +17,19 @@
         :key="todo.id"
         :todo="todo"
         :checkAll="!anyRemaining"
-        @removedTodo="removeTodo"
-        @finishedEdit="finishedEdit"
       ></todo-item>
     </transition-group>
 
     <div class="extra-container">
-      <div>
-        <label>
-          <input type="checkbox" :checked="!anyRemaining" @change="checkAllTodos" />Check All
-        </label>
-      </div>
-      <div>{{ remaining }} items left</div>
+      <todo-check-all></todo-check-all>
+      <todo-items-remaining></todo-items-remaining>
     </div>
 
     <div class="extra-container">
-      <div>
-        <button :class="{ active: filter == 'all' }" @click="filter = 'all'">All</button>
-        <button :class="{ active: filter == 'active' }" @click="filter = 'active'">Active</button>
-        <button :class="{ active: filter == 'completed' }" @click="filter = 'completed'">Completed</button>
-      </div>
-
+      <todo-filtered></todo-filtered>
       <div>
         <transition name="fade">
-          <button v-if="showClearCompleteButton" @click="clearCompleted">Clear Completed</button>
+          <todo-clear-completed></todo-clear-completed>
         </transition>
       </div>
     </div>
@@ -49,53 +38,48 @@
 
 <script>
 import TodoItem from "../components/TodoItem";
+import TodoItemsRemaining from "../components/TodoItemsRemaining";
+import TodoCheckAll from "../components/TodoCheckAll";
+import TodoFiltered from "../components/TodoFiltered";
+import TodoClearCompleted from "../components/TodoClearCompleted";
+
 export default {
   name: "todo-list",
   components: {
-    TodoItem
+    TodoItem,
+    TodoItemsRemaining,
+    TodoCheckAll,
+    TodoFiltered,
+    TodoClearCompleted
   },
   data() {
     return {
       newTodo: "",
       idForTodo: 3,
-      beforeEditCache: "",
-      filter: "all",
-      todos: [
-        {
-          id: 1,
-          title: "Finish vue Screncast",
-          completed: false,
-          editing: false
-        },
-        {
-          id: 2,
-          title: "mirmir vue Screncast",
-          completed: false,
-          editing: false
-        }
-      ]
+      beforeEditCache: ""
     };
+  },
+
+  created() {
+    // eventBus.$on("removedTodo", index => this.removeTodo(index));
+    // eventBus.$on("finishedEdit", data => this.finishedEdit(data));
+    // eventBus.$on("checkAllChanged", checked => this.checkAllTodos(checked));
+    eventBus.$on("filterChanged", filter => (this.filter = filter));
+    eventBus.$on("clearCompletedTodos", () => this.clearCompleted());
   },
 
   computed: {
     remaining() {
-      return this.todos.filter(todo => !todo.completed).length;
+      return this.$store.getters.remaining;
     },
     anyRemaining() {
-      return this.remaining != 0;
+      return this.$store.getters.anyRemaining;
     },
     todosFiltered() {
-      if (this.filter == "all") {
-        return this.todos;
-      } else if (this.filter == "active") {
-        return this.todos.filter(todo => !todo.completed);
-      } else if (this.filter == "completed") {
-        return this.todos.filter(todo => todo.completed);
-      }
-      return this.todos;
+      return this.$store.getters.todosFiltered;
     },
-    showClearCompleteButton() {
-      return this.todos.filter(todo => todo.completed).length > 0;
+    showClearCompletedButton() {
+      return this.$store.getters.showClearCompletedButton;
     }
   },
 
@@ -104,10 +88,10 @@ export default {
       if (this.newTodo.trim().length == 0) {
         return;
       }
-      this.todos.push({
+
+      this.$store.commit("addTodo", {
         id: this.idForTodo,
-        title: this.newTodo,
-        completed: false
+        title: this.newTodo
       });
 
       this.newTodo = "";
@@ -127,19 +111,25 @@ export default {
       todo.title = this.beforeEditCache;
       todo.editing = false;
     },
-    removeTodo(id) {
-      const index = this.todos.findIndex(item => item.id == id);
-      this.todos.splice(index, 1);
-    },
+    // removeTodo(id) {
+    //   const index = this.$store.state.todos.findIndex(item => item.id == id);
+    //   this.$store.state.todos.splice(index, 1);
+    // },
     checkAllTodos() {
-      this.todos.forEach(todo => (todo.completed = event.target.checked));
+      // this.$store.state.todos.forEach(
+      //   todo => (todo.completed = event.target.checked)
+      // );
     },
     clearCompleted() {
-      this.todos = this.todos.filter(todo => !todo.completed);
+      // this.$store.state.todos = this.$store.state.todos.filter(
+      //   todo => !todo.completed
+      // );
     },
     finishedEdit(data) {
-      const index = this.todos.findIndex(item => item.id == data.id);
-      this.todos.splice(index, 1, data);
+      const index = this.$store.state.todos.findIndex(
+        item => item.id == data.id
+      );
+      this.$store.state.todos.splice(index, 1, data);
     }
   }
 };
